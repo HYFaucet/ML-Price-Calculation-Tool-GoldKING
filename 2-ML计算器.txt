@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱ML定价计算器-GOLDKING🤝</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: white;
+            margin: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+        h2 {
+            color: #333;
+            margin: 0 0 20px 0;
+            font-size: 1.4em;
+            text-align: center;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            margin-bottom: 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 10px;
+        }
+        .calculate-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .template-btn {
+            background: #2196F3;
+            color: white;
+        }
+        #results table {
+            width: 100%;
+            margin-top: 20px;
+            font-size: 0.9em;
+            border-collapse: collapse;
+        }
+        #results th, 
+        #results td {
+            padding: 10px;
+            border: 1px solid #eee;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #results th {
+            background: #f8f9fa;
+        }
+        .currency {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .profit {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .flag {
+            font-size: 1.1em;
+        }
+        .progress-bar {
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 50%;
+        }
+        .upload-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+        #shippingFile {
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .custom-upload {
+            background: #2196F3;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .collapse {
+            margin-top: 20px;
+        }
+        .collapse-header {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collapse-content {
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .exchange-rate {
+            width: 70px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 计算器模块 -->
+        <div class="section">
+            <h2>📱 Mercado Libre 定价计算器-GOLDKING🤝</h2>
+            <form onsubmit="event.preventDefault();calculatePrice()">
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>💰 产品成本 (CNY)</label>
+                        <input type="number" id="cost" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>📦 重量 (kg)</label>
+                        <input type="number" id="weight" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>🎯 利润率 (%)</label>
+                        <input type="number" id="profitMargin" value="18" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>🤝 佣金率 (%)</label>
+                        <input type="number" id="commissionRate" value="18.5" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>💱 汇率 (USD/CNY)</label>
+                        <input type="number" id="exchangeRate" value="7.2" step="0.01">
+                    </div>
+                </div>
+                <button type="submit" class="calculate-btn">💰 立即计算 💰</button>
+            </form>
+            <div id="results"></div>
+        </div>
+
+        <!-- 运费模板模块 -->
+        <div class="section">
+            <h2>✈️ 运费模板管理(用于更新新的运费) ✈️</h2>
+            <div class="upload-wrapper">
+                <input type="file" id="shippingFile" accept=".xlsx">
+                <div class="custom-upload">📤 上传运费模板 (.xlsx)</div>
+            </div>
+            <button class="template-btn" onclick="exportTemplate()">📥 下载运费模板 (.xlsx)</button>
+        </div>
+
+        <!-- 包裹尺寸限制模块 -->
+        <div class="section">
+            <div class="collapse">
+                <div class="collapse-header" onclick="toggleCollapse()">
+                    <span>📦 各站点包裹尺寸/重量限制 ⚠️ ———— 不包邮的每单位附加费🤝</span>
+                    <span id="collapseToggle">▲</span>
+                </div>
+                <div class="collapse-content" id="collapseContent" style="display: block;">
+                    <div id="sizeLimits">
+                        <h3>针对不包邮商品(买家承担运费)，每增加1单位会收取附加费</h3>
+                        <p><strong>每单位附加费说明:</strong><br>🇲🇽墨西哥:售价低于299 MXN(买家支付运费)<br>当买家购买多件产品时将收取每单位额外固定成本：MXN $33</p>
+<br>🇧🇷巴西:售价低于79 BRL(买家支付运费)<br>当买家购买多件产品时将收取每单位额外固定成本：BRL $9.5</p>
+<br>🇨🇱智利:售价低于15650 CLP(买家支付运费)<br>当买家购买多件产品时将收取每单位额外固定成本：CLP $1650</p>
+<br>🇨🇴哥伦比亚:售价低于60000 COP(买家支付运费)<br>当买家购买多件产品时将收取每单位额外固定成本：COP $7200<br></p>
+🇦🇷阿根廷:售价低于30000 ARS(买家支付运费)<br>当买家购买多件产品时将收取每单位额外固定成本：ARS $1800</p>
+
+                        <h3>🇲🇽 MX</h3>
+                        <p><strong>MailAmericas:</strong><br>最大尺寸(高x宽x长): 40×50×60厘米<br>最小重量：100克<br>最大重量：15公斤</p>
+                        <p><strong>Cainiao:</strong><br>每边长度：最大60厘米<br>三边总和的长度：最大90厘米<br>最大重量：5公斤</p>
+
+                        <h3>🇧🇷 BR</h3>
+                        <p><strong>ANJUN:</strong><br>最小尺寸（高 x 宽 x 长）：1 x 10 x 15 厘米<br>最大尺寸（高+宽+长不超过200厘米）：<br>最大尺寸（长度、宽度或高度）不得超过 100 厘米，并且<br>第二大尺寸不得超过 90 厘米<br>尺寸总和不得超过 200 厘米<br>最大长度：16 厘米<br>最小长度：11 厘米<br>最大重量：30公斤</p>
+
+                        <h3>🇨🇱 CL</h3>
+                        <p><strong>MailAmericas:</strong><br>最大尺寸(高+宽+长不超过2米):<br>每边不超过1.05米<br>最大重量：15公斤</p>
+
+                        <h3>🇨🇴 CO</h3>
+                        <p><strong>MailAmericas:</strong><br>最大尺寸(高+宽+长不超过2米):<br>每边不超过1.05米<br>最小重量：1克<br>最大重量：25公斤</p>
+                        <p><strong>Cainiao:</strong><br>每边长度：最大60厘米<br>三边总和的长度：最大90厘米<br>最大重量：2公斤</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script>
+        // 完整运费数据存储结构
+        let shippingRates = {
+            MX: createRanges(0.1, [3.40,4.59,5.83,7.28,8.48,10.10,11.46,12.62,13.88,14.75,18.64,25.80,44.23,51.72,60.33,76.23,92.12,108.01,123.90,139.79,155.69,171.58,187.47,203.36,219.25]),
+            BR: createRanges(0.1, [4.63,5.50,8.31,8.60,10.93,11.30,13.43,13.63,16.10,16.47,20.06,26.37,39.42,42.56,52.44,79.67,97.90,111.26,124.62,137.98,151.35,164.71,178.07,191.43,204.79]),
+            CL: createRanges(0.1, [3.99,5.03,6.35,7.85,9.13,10.01,11.22,11.79,13.34,13.97,18.47,25.06,46.11,55.18,68.98,82.68,96.38,110.08,123.78,137.48,151.18,164.88,178.58,192.28,205.98]),
+            CO: createRanges(0.1, [3.80,5.07,6.31,8.11,8.73,10.97,11.70,12.33,12.95,13.64,18.85,26.08,43.79,57.19,67.49,79.45,95.08,110.84,126.59,142.35,158.11,173.86,189.62,205.37,221.13])
+        };
+
+        // 货币转换表（示例，仅包含部分国家）
+        const currencySymbols = {
+            MX: "MXN",
+            BR: "BRL",
+            CL: "CLP",
+            CO: "COP"
+        };
+
+        let countryExchangeRates = {
+            MX: 19.9,
+            BR: 5.3,
+            CL: 800,
+            CO: 4000
+        };
+
+        // 生成范围数据的工具函数
+        function createRanges(step, rates) {
+            let ranges = [];
+            let current = 0;
+            for(let rate of rates) {
+                ranges.push({
+                    min: current,
+                    max: current + step,
+                    rate: rate
+                });
+                current += step;
+                if(current >= 1) step = current < 2 ? 0.5 : 1;
+            }
+            return ranges;
+        }
+
+        // 文件上传处理
+        document.getElementById('shippingFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processExcel(new Uint8Array(e.target.result));
+                alert('运费数据更新成功！');
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 处理Excel数据
+        function processExcel(data) {
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+            let currentCountry = null;
+            let ranges = [];
+            
+            rows.forEach(row => {
+                if(row[0] && row[0].startsWith('运费表 - ')) {
+                    if(currentCountry) {
+                        shippingRates[currentCountry] = ranges;
+                        ranges = [];
+                    }
+                    currentCountry = row[0].split(' - ')[1];
+                }
+                else if(row[0] && row[0].includes(' - ') && !isNaN(row[1])) {
+                    const [min, max] = row[0].split(' - ').map(parseFloat);
+                    ranges.push({min, max, rate: parseFloat(row[1])});
+                }
+            });
+            
+            if(currentCountry) {
+                shippingRates[currentCountry] = ranges;
+            }
+        }
+
+        // 导出模板
+        function exportTemplate() {
+            const workbook = XLSX.utils.book_new();
+            const sheetData = [];
+            
+            Object.keys(shippingRates).forEach(country => {
+                sheetData.push([`运费表 - ${country}`]);
+                sheetData.push(['重量范围 (kg)', '运费 (USD)']);
+                shippingRates[country].forEach(range => {
+                    sheetData.push([`${range.min.toFixed(1)} - ${range.max.toFixed(1)}`, range.rate]);
+                });
+                sheetData.push([], []);
+            });
+            
+            const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+            XLSX.utils.book_append_sheet(workbook, worksheet, '运费模板');
+            XLSX.writeFile(workbook, '国际运费模板.xlsx');
+        }
+
+        // 计算核心逻辑
+        function calculatePrice() {
+            const inputs = getInputValues();
+            if(!validateInputs(inputs)) return;
+
+            let html = `<table>
+                <tr>
+                    <th>🇨🇳国家🇨🇳</th>
+                    <th>💰定价💰</th>
+                    <th>✈️运费✈️</th>
+                    <th>🤝佣金🤝</th>
+                    <th>📈利润📈</th>
+                    <th>🔍利润率🔍</th>
+                </tr>`;
+
+            Object.keys(shippingRates).forEach(country => {
+                const shippingUSD = getShippingCost(inputs.weight, country);
+                const result = calculateFinalPrice(inputs, shippingUSD);
+                
+                html += `<tr>
+                    <td>
+                        ${getCountryFlag(country)} ${country}<br>
+                        <label style="font-size: 0.8em;">${currencySymbols[country]}/USD:</label>
+                        <input type="number" class="exchange-rate" id="exchangeRate${country}" value="${countryExchangeRates[country]}" step="0.01" onchange="updateExchangeRate('${country}', this.value)">
+                    </td>
+                    <td class="currency">$ ${result.priceUSD}<br>¥ ${result.priceCNY}<br>${currencySymbols[country]} ${(result.priceUSD * countryExchangeRates[country]).toFixed(2)}</td>
+                    <td>$ ${shippingUSD.toFixed(2)}<br>¥ ${(shippingUSD*inputs.exchangeRate).toFixed(2)}<br>${currencySymbols[country]} ${(shippingUSD * countryExchangeRates[country]).toFixed(2)}</td>
+                    <td>$ ${result.commissionUSD}<br>¥ ${result.commissionCNY}<br>${currencySymbols[country]} ${(result.commissionUSD * countryExchangeRates[country]).toFixed(2)}</td>
+                    <td class="profit">$ ${result.profitUSD}<br>¥ ${result.profitCNY}<br>${currencySymbols[country]} ${(result.profitUSD * countryExchangeRates[country]).toFixed(2)}</td>
+                    <td><div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width:${Math.abs(result.profitMargin*100)}%"></div>
+                        </div>
+                        <div>${(result.profitMargin*100).toFixed(1)}%</div>
+                    </div></td>
+                </tr>`;
+            });
+
+            html += '</table>';
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // 辅助函数
+        function getInputValues() {
+            return {
+                cost: parseFloat(document.getElementById('cost').value),
+                weight: parseFloat(document.getElementById('weight').value),
+                profitMargin: parseFloat(document.getElementById('profitMargin').value) / 100,
+                commissionRate: parseFloat(document.getElementById('commissionRate').value) / 100,
+                exchangeRate: parseFloat(document.getElementById('exchangeRate').value)
+            };
+        }
+
+        function validateInputs(inputs) {
+            return !isNaN(inputs.cost) && !isNaN(inputs.weight);
+        }
+
+        function getShippingCost(weight, country) {
+            return shippingRates[country].find(r => weight > r.min && weight <= r.max)?.rate || 0;
+        }
+
+        function calculateFinalPrice(inputs, shippingUSD) {
+            const costUSD = inputs.cost / inputs.exchangeRate;
+            const priceUSD = (costUSD + shippingUSD) / (1 - inputs.profitMargin - inputs.commissionRate);
+            return {
+                priceUSD: priceUSD.toFixed(2),
+                priceCNY: (priceUSD * inputs.exchangeRate).toFixed(2),
+                commissionUSD: (priceUSD * inputs.commissionRate).toFixed(2),
+                commissionCNY: (priceUSD * inputs.commissionRate * inputs.exchangeRate).toFixed(2),
+                profitUSD: (priceUSD * inputs.profitMargin).toFixed(2),
+                profitCNY: (priceUSD * inputs.profitMargin * inputs.exchangeRate).toFixed(2),
+                profitMargin: inputs.profitMargin
+            };
+        }
+
+        function getCountryFlag(code) {
+            const flags = {MX: '🇲🇽', BR: '🇧🇷', CL: '🇨🇱', CO: '🇨🇴'};
+            return flags[code] || '🌐';
+        }
+
+        function updateExchangeRate(country, value) {
+            countryExchangeRates[country] = parseFloat(value);
+            calculatePrice();
+        }
+
+        // 修改后的折叠面板切换功能
+        function toggleCollapse() {
+            const content = document.getElementById('collapseContent');
+            const toggle = document.getElementById('collapseToggle');
+            if(content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+    </script>
+</body>
+</html>
